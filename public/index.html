@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="home.css" />
     <link href="https://fonts.cdnfonts.com/css/nrvsbrkdwn" rel="stylesheet" />
     <link href="https://fonts.cdnfonts.com/css/sofia-sans" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
   </head>
   <body>
     <section class="body">
@@ -16,22 +17,24 @@
         </div>
         <div id="display"></div>
       </main>
-      <main class="main3">
-        <div class="homie">
+      <main class="main3 container-fluid">
+        <div class="homie w-100 ms-auto p-lg-5 row">
           <input
             type="text"
             name=""
             placeholder="message title"
             id="titleHome"
+            class="form-control w-100 mb-2"
           />
           <input
             type="text"
             name=""
             id="release"
             placeholder="message content"
+            class="form-control w-100 mb-2"
           />
-          <input type="file" name="" id="myFile" class="newOne" />
-          <button class="submitMe" onclick="submitData()">Submit</button>
+          <input type="file" name="" id="myFile" class="newOne form-control w-100" />
+          <button class="submitMe btn btn-success mt-2  w-100" onclick="submitData()">Submit</button>
         </div>
       </main>
 
@@ -65,13 +68,13 @@
       const firebaseConfig = {
         apiKey: "AIzaSyCps2kwmDIoGpgqiH-RSpBc_UDdmuwLpg4",
         authDomain: "fireflixion.firebaseapp.com",
+        databaseURL: "https://fireflixion-default-rtdb.firebaseio.com",
         projectId: "fireflixion",
         storageBucket: "fireflixion.appspot.com",
         messagingSenderId: "34680166639",
         appId: "1:34680166639:web:8f8a756f7e03c4df37a31a",
         measurementId: "G-1P4RSCX3L4",
       };
-
       // Initialize Firebase
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
@@ -124,13 +127,14 @@
         let time = new Date().toLocaleTimeString();
         onAuthStateChanged(auth, (user) => {
           let userName = user.displayName;
-          if (titleH !== "" && releaseDate !== "") {
+          if (titleH !== "" && releaseDate !== "" && myFile.files[0]) {
+            // Check if file exists
             titleHome.value = "";
             release.value = "";
             let todoObj = {
               userName,
               titleH,
-              file: myFile.files[0].name,
+              file: myFile.files[0],
               releaseDate,
               date,
               time,
@@ -144,13 +148,25 @@
               storage,
               `Uploaded/${todoObj.userName}/${filename}`
             );
-            let doneStoring = uploadBytesResumable(storageRef, uploadedFile);
-            doneStoring.on("state_changed", (snapshot) => {
-              let progress = snapshot.bytesTransferred;
-              let total = snapshot.totalBytes;
-              const showProgress = ((progress / total) * 100).toFixed(2);
-              console.log(showProgress);
-            });
+            // Use uploadBytesResumable properly with the reference
+            let uploadTask = uploadBytesResumable(stref, uploadedFile);
+            uploadTask.on(
+              "state_changed",
+              (snapshot) => {
+                let progress =
+                  (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log(`Upload is ${progress}% done`);
+              },
+              (error) => {
+                console.error("Error uploading file:", error);
+              },
+              () => {
+                // Upload complete, handle success
+                console.log("Upload complete");
+              }
+            );
+          } else {
+            console.error("No file selected");
           }
         });
       };
@@ -160,14 +176,18 @@
       let sdbRef = ref(database, "savedData");
       onValue(sdbRef, (snapshot) => {
         const data = snapshot.val();
-        console.log(data.length);
+        console.log(data);
 
-        if (data.length > 0) {
-          startPoint = data.length;
+        if (data !== null && data !== undefined) {
+          if (Array.isArray(data) && data.length > 0) {
+            startPoint = data.length;
+          } else {
+            startPoint = 0;
+          }
         } else {
-          startPoint = 0;
+          startPoint = 0; // Set a default value if data is null or undefined
         }
-
+        
         display2.innerHTML = "";
 
         data.map((item) => {
@@ -176,9 +196,8 @@
           <h4>${item.titleH}</h4>
           <p>${item.releaseDate}</p>
         </div>
-      `;
+        `;
         });
-        console.log(data);
       });
     </script>
   </body>
