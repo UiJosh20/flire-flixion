@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FireFlix | Dashboard</title>
+    <link rel="stylesheet" href="home.css" />
+    <link href="https://fonts.cdnfonts.com/css/nrvsbrkdwn" rel="stylesheet" />
+    <link href="https://fonts.cdnfonts.com/css/sofia-sans" rel="stylesheet" />
+  </head>
+  <body>
+    <section class="body">
+      <main class="main2">
+        <div>
+          <h2>FIREFLIX</h2>
+        </div>
+        <div id="display"></div>
+      </main>
+      <main class="main3">
+        <div class="homie">
+          <input
+            type="text"
+            name=""
+            placeholder="message title"
+            id="titleHome"
+          />
+          <input
+            type="text"
+            name=""
+            id="release"
+            placeholder="message content"
+          />
+          <input type="file" name="" id="myFile" class="newOne" />
+          <button class="submitMe" onclick="submitData()">Submit</button>
+        </div>
+      </main>
+
+      <main>
+        <div id="display2"></div>
+      </main>
+    </section>
+
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+
+      import {
+        getDatabase,
+        ref,
+        set,
+        onValue,
+      } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-database.js";
+
+      import {
+        getStorage,
+        ref as storageRef,
+        uploadBytesResumable,
+      } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-storage.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCps2kwmDIoGpgqiH-RSpBc_UDdmuwLpg4",
+        authDomain: "fireflixion.firebaseapp.com",
+        projectId: "fireflixion",
+        storageBucket: "fireflixion.appspot.com",
+        messagingSenderId: "34680166639",
+        appId: "1:34680166639:web:8f8a756f7e03c4df37a31a",
+        measurementId: "G-1P4RSCX3L4",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const database = getDatabase(app);
+      const storage = getStorage(app);
+      let startPoint = 0;
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          console.log(user);
+          let Cname = user.displayName;
+          let maily = user.email;
+          let dispImg = user.photoURL;
+
+          if (Cname == null && dispImg == null) {
+            display.innerHTML = `
+          <h3>${maily}</h3>
+          <button onclick="googleSignOut()">log out</button>
+            
+            `;
+          } else {
+            display.innerHTML = `
+            <h3>${Cname}</h3>
+            <img src=${dispImg} style="border-radius: 100%;"  class="minus" title="profile picture"/>
+            <img src="images/logout.png" alt="sign-out icon" width="35" onclick="googleSignOut()" title="sign out" class="signlogo">
+  
+          `;
+          }
+        } else {
+          window.location.href = "login.html";
+        }
+      });
+
+      const googleSignOut = () => {
+        signOut(auth)
+          .then(() => {
+            console.log("out with you");
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      };
+
+      window.googleSignOut = googleSignOut;
+
+      const submitData = () => {
+        let titleH = titleHome.value;
+        let releaseDate = release.value;
+        let date = new Date().toLocaleDateString();
+        let time = new Date().toLocaleTimeString();
+        onAuthStateChanged(auth, (user) => {
+          let userName = user.displayName;
+          if (titleH !== "" && releaseDate !== "") {
+            titleHome.value = "";
+            release.value = "";
+            let todoObj = {
+              userName,
+              titleH,
+              file: myFile.files[0].name,
+              releaseDate,
+              date,
+              time,
+            };
+            let dbRef = ref(database, `savedData/${startPoint}`);
+            set(dbRef, todoObj);
+
+            let filename = myFile.files[0].name;
+            let uploadedFile = myFile.files[0];
+            let stref = storageRef(
+              storage,
+              `Uploaded/${todoObj.userName}/${filename}`
+            );
+            let doneStoring = uploadBytesResumable(storageRef, uploadedFile);
+            doneStoring.on("state_changed", (snapshot) => {
+              let progress = snapshot.bytesTransferred;
+              let total = snapshot.totalBytes;
+              const showProgress = ((progress / total) * 100).toFixed(2);
+              console.log(showProgress);
+            });
+          }
+        });
+      };
+
+      window.submitData = submitData;
+
+      let sdbRef = ref(database, "savedData");
+      onValue(sdbRef, (snapshot) => {
+        const data = snapshot.val();
+        console.log(data.length);
+
+        if (data.length > 0) {
+          startPoint = data.length;
+        } else {
+          startPoint = 0;
+        }
+
+        display2.innerHTML = "";
+
+        data.map((item) => {
+          document.getElementById("display2").innerHTML += `
+        <div style="color:white;">
+          <h4>${item.titleH}</h4>
+          <p>${item.releaseDate}</p>
+        </div>
+      `;
+        });
+        console.log(data);
+      });
+    </script>
+  </body>
+</html>
