@@ -6,9 +6,10 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   GithubAuthProvider,
-  sendEmailVerification,
+  TwitterAuthProvider,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
 } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
 
 
@@ -27,6 +28,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const providerGIt = new GithubAuthProvider();
+const twitterProvider = new TwitterAuthProvider()
 
 const googleSignin = () => {
   signInWithPopup(auth, provider)
@@ -89,6 +91,38 @@ const signInGit = () => {
     });
 };
 window.signInGit = signInGit;
+
+const signInTwitter = () => {
+  signInWithPopup(auth, twitterProvider)
+    .then((result) => {
+      const user = result.user;
+      if (user) {
+        sendEmailVerification(auth.currentUser).then(() => {
+          console.log("Verification email sent!");
+        });
+        window.location.href = "index.html";
+      } else {
+        window.location.href = "login.html";
+      }
+    })
+    .catch((error) => {
+      let errorCode = error.code;
+      console.log(errorCode);
+      if (errorCode == "auth/account-exists-with-different-credential") {
+        showerr.innerHTML = `<p style="color:red; text-align:center;">A user is already signed in with that email</p>`;
+        setTimeout(() => {
+          showerr.style.display = "none";
+        }, 4000);
+      }else if(errorCode == "auth/internal-error") {
+        showerr.innerHTML = `<p style="color:orange; text-align:center;">you are not connected to the internet</p>`;
+        setTimeout(() => {
+          showerr.style.display = "none";
+        }, 4000); 
+      }
+    });
+};
+
+window.signInTwitter = signInTwitter
 
 const signinEmail = () => {
   let email = yourEmail.value;
